@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:rajaongkir/app/data/constants.dart';
 import 'package:rajaongkir/app/models/city_model.dart';
+import 'package:rajaongkir/app/models/courier_result_model.dart';
 import 'package:rajaongkir/app/models/province_model.dart';
 import 'package:http/http.dart' as http;
+import 'package:rajaongkir/app/models/service_courier.dart';
 
 class HomeController extends GetxController {
   var selectedProvince = "".obs;
@@ -14,7 +16,32 @@ class HomeController extends GetxController {
   var selectedCourier = "".obs;
   var weight = 0.obs;
 
+  var isSelected = false.obs;
+
+  var service = CourierService().obs;
+
   late TextEditingController weightController;
+
+  void setCourierService(String serviceCode, int cost, String estimationDay){
+    service(CourierService(service: serviceCode, cost: cost, estimationDay: estimationDay));
+  }
+
+  Future<List<CostsModel>> calculateCost() async {
+    Uri url = Uri.parse("https://api.rajaongkir.com/starter/cost");
+    final response = await http.post(url, headers: {
+      "content-type": "application/x-www-form-urlencoded",
+      "key": API_KEY
+    }, body: {
+      "origin": "${selectedCity.value}",
+      "destination": "${selectedDestinationCity.value}",
+      "weight": "${double.parse(weightController.text) * 1000}",
+      "courier": "${selectedCourier.value}"
+    });
+    final jsonData = json.decode(response.body);
+    final result = jsonData["rajaongkir"]["results"][0];
+    CourierResultModel courierResult = CourierResultModel.fromJson(result);
+    return courierResult.costs;
+  }
 
   Future<List<ProvinceModel>> getProvinces() async {
     List<ProvinceModel> provinces = [];
